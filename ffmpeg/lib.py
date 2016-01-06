@@ -79,7 +79,7 @@ def fmt_d2timestr(ts):
 	return fmt_timestr(bigs)
 
 def fmt_q2timestr(dur, tb):
-	if dur is None or tb is None or tb == lib_avutil.AV_NOPTS_VALUE: return None
+	if dur is None or tb is None or tb == avutil.AV_NOPTS_VALUE: return None
 
 	ts = dur * q2d(tb)
 	return fmt_d2timestr(ts)

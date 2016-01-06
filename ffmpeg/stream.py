@@ -13,7 +13,7 @@ class Stream(object):
 	@classmethod
 	def _decoded(cls, av_stream):
 		stream = cls(av_stream)
-		stream.codec_ctx = CodecCtx._decoded(self.av_stream.codec)
+		stream.codec_ctx = CodecCtx._decoded(av_stream.codec)
 		return stream
 
 	@property

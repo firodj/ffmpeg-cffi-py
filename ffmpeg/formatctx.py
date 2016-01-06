@@ -1,5 +1,7 @@
 from .lib import *
-		
+from .dict import Dict
+from .stream import Stream
+
 class FormatCtx(object):
 	
 	def __init__(self, av_format_ctx):
@@ -21,7 +23,7 @@ class FormatCtx(object):
 			path = path.encode('utf-8')
 	
 		ref = ffi.new('struct AVFormatContext **')
-		err = avformat.avformat_open_input(ref, filepath, NULL, NULL)
+		err = avformat.avformat_open_input(ref, path, NULL, NULL)
 		if err: return
 		if ref[0] == NULL: return
 		
@@ -55,6 +57,27 @@ class FormatCtx(object):
 	def audio_codec_id(self):
 	    codec_id = self.av_format_ctx.audio_codec_id
 	    return None if codec_id == avcodec.AV_CODEC_ID_NONE else codec_id
+
+	@property
+	def bit_rate(self):
+	    return self.av_format_ctx.bit_rate
+	
+	def to_primitive(self, full=False):
+		d = dict(
+			#filepath = self.filepath,
+			nb_streams   = self.nb_streams,
+			#start_time   = fmt_q2timestr(self.av_format_ctx.start_time, lib_avutil.av_get_time_base_q()),
+			#duration     = fmt_q2timestr(self.av_format_ctx.duration, lib_avutil.av_get_time_base_q()),
+			bit_rate     = existent( self.bit_rate ),
+			
+			name         = self.long_name,
+			metadata     = self.metadata.to_primitive(),
+			aspect_ratio = self.aspect_ratio,
+		)
+		if full:
+			d['streams'] = [s.to_primitive() for s in self.streams]
+		return d
+
 	
 class InputFormat(FormatCtx):
 
@@ -120,8 +143,9 @@ class InputFormat(FormatCtx):
 		pkt = Packet()
 
 		while avformat.av_read_frame(self.av_format_ctx, pkt.av_packet) >= 0:
+			pass
+			#TODO
 			
-
 class OutputFormat(FormatCtx):
 
 	def new_stream(self, codec_id):
