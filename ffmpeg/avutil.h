@@ -27,6 +27,7 @@ int av_get_bytes_per_sample(enum AVSampleFormat sample_fmt);
 
 // pixdesc.h
 const char *av_get_pix_fmt_name(enum AVPixelFormat pix_fmt);
+enum AVPixelFormat av_get_pix_fmt(const char *name);
 
 // dict.h
 AVDictionaryEntry *av_dict_get(const AVDictionary *m, const char *key, const AVDictionaryEntry *prev, int flags);

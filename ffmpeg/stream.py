@@ -1,16 +1,21 @@
 from .lib import *
 from .dict import Dict
+from .codecctx import CodecCtx
 
 class Stream(object):
 
 	def __init__(self, av_stream):
 		self.av_stream = av_stream
 		self.metadata = Dict(self.av_stream.metadata)
-		self.type = None
-		self.av_codec_ctx = self.av_stream.codec
-		if self.av_stream.codec != NULL:
-			self.parse_type()
-		
+		self.coder = None
+		self.codec_ctx = None
+
+	@classmethod
+	def _decoded(cls, av_stream):
+		stream = cls(av_stream)
+		stream.codec_ctx = CodecCtx._decoded(self.av_stream.codec)
+		return stream
+
 	@property
 	def is_default(self):
 		return (self.av_stream.disposition & avformat.AV_DISPOSITION_DEFAULT) != 0
@@ -18,75 +23,55 @@ class Stream(object):
 	@property
 	def frame_rate(self):
 		return q2d(avformat.av_stream_get_r_frame_rate(self.av_stream))
+
+	@property
+	def nb_frames(self):
+		return self.av_stream.nb_frames
 	
-	def parse_type(self):
-		self.type = stringify(lib_avutil.av_get_media_type_string(self.av_codec_ctx.codec_type))
+	@property
+	def start_time(self):
+		return None if self.av_stream.start_time == ffi.cast('int64_t',avutil.AV_NOPTS_VALUE) else self.av_stream.start_time
 
-		self.codec_tag_string = None
-		if self.av_codec_ctx.codec_tag:
-			val_str = ffi.new('char[128]')
-			lib_avcodec.av_get_codec_tag_string(val_str, ffi.sizeof(val_str), self.av_codec_ctx.codec_tag)
-			self.codec_tag_string = stringify(val_str)
-		
-		decoder = self.av_codec_ctx.codec	
-		if decoder == NULL:
-			decoder = lib_avcodec.avcodec_find_decoder(self.av_codec_ctx.codec_id)
-			self.av_codec_ctx.codec = decoder
+	def start_time_d(self):
+		if self.start_time is None or self.time_base is None: return None
+		return float(self.start_time) * self.time_base
 
-		if decoder == NULL:
-			descriptor = lib_avcodec.avcodec_descriptor_get(self.av_codec_ctx.codec_id)
-			if descriptor != NULL:
-				self.codec_name = stringify(descriptor.name)
-				self.codec_long_name = stringify(descriptor.long_name)
-		else:
-			self.codec_name = stringify(decoder.name)
-			self.codec_long_name = stringify(decoder.long_name)
-			self.profile_name = stringify(lib_avcodec.av_get_profile_name(decoder, self.av_codec_ctx.profile))
+	@property
+	def duration(self):
+		return None if self.av_stream.duration == ffi.cast('int64_t',avutil.AV_NOPTS_VALUE) else self.av_stream.duration
 
-		self.pix_fmt_name = stringify(lib_avutil.av_get_pix_fmt_name(self.av_codec_ctx.pix_fmt))
-		self.color_range_string = "tv" if self.av_codec_ctx.color_range == lib_avutil.AVCOL_RANGE_MPEG else "pc"
-		self.colorspace_name = stringify(lib_avutil.av_get_colorspace_name(self.av_codec_ctx.colorspace))
-		self.sample_fmt_name = stringify(lib_avutil.av_get_sample_fmt_name(self.av_codec_ctx.sample_fmt))
-		
-		val_str = ffi.new('char[128]')
-		lib_avutil.av_get_channel_layout_string(val_str, ffi.sizeof(val_str), self.av_codec_ctx.channels, self.av_codec_ctx.channel_layout)
-		self.channel_layout_string = stringify(val_str)
+	def duration_d(self):
+		if self.duration is None or self.time_base is None: return None
+		return float(self.duration) * self.time_base
 
-		if self.av_codec_ctx.bits_per_raw_sample == 0:
-			self.av_codec_ctx.bits_per_raw_sample = lib_avcodec.av_get_bits_per_sample(self.av_codec_ctx.codec_id)
+	@property
+	def time_base(self):
+		return rational( self.av_stream.time_base )
 
+	@property
+	def index(self):
+		return self.av_stream.index
+	
 	def to_primitive(self):
 		d = dict(
-			type     = self.type,
+			type     = self.codec_ctx.type,
 			metadata = self.metadata.to_primitive(['language', 'title']),
-			#index    = self.av_stream.index,
 			start_time = fmt_q2timestr(self.av_stream.start_time, self.av_stream.time_base),
 			duration   = fmt_q2timestr(self.av_stream.duration, self.av_stream.time_base),
-			nb_frames  = existent(self.av_stream.nb_frames),
-			#is_default = self.is_default,
-			codec_tag  = self.codec_tag_string,
-			codec_name = self.codec_long_name,
-			profile    = self.profile_name,
-			bit_rate   = existent( self.av_codec_ctx.bit_rate ),
-			bits_per_sample = existent( self.av_codec_ctx.bits_per_raw_sample ),
+			nb_frames  = existent(self.nb_frames),
+			codec_tag  = self.codec_ctx.codec_tag,
+			codec_name = self.codec_ctx.coder.long_name,
+			profile    = self.codec_ctx.profile,
+			bit_rate   = existent( self.codec_ctx.bit_rate ),
+			bits_per_sample = existent( self.codec_ctx.bits_per_sample ),
 		)
 
-		if self.type == 'video':
-			d.update(dict(
-				width       = self.av_codec_ctx.width,
-				height      = self.av_codec_ctx.height,
-				pix_fmt     = self.pix_fmt_name,
-				color_range = self.color_range_string,
-				color_space = self.colorspace_name,
-				frame_rate  = self.frame_rate,
-			))
+		if self.codec_ctx.type == 'video':
+			d['frame_rate'] = self.frame_rate
 
-		if self.type == 'audio':
-			d.update(dict(
-				sample_fmt  = self.sample_fmt_name,
-				sample_rate = self.av_codec_ctx.sample_rate,
-				channels    = self.av_codec_ctx.channels,
-				channel_layout  = self.channel_layout_string,
-			))
+		if self.codec_ctx.type == 'audio':
+			pass
+
+		d.update(self.codec_ctx.to_primitive())
 
 		return d

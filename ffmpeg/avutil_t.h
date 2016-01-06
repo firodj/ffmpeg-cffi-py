@@ -354,5 +354,6 @@ typedef struct AVClass AVClass;
 #define AV_CH_FRONT_LEFT             0x00000001
 #define AV_CH_FRONT_RIGHT            0x00000002
 #define AV_CH_FRONT_CENTER           0x00000004
+
 #define AV_CH_LAYOUT_MONO            0x00000004
 #define AV_CH_LAYOUT_STEREO          0x00000003

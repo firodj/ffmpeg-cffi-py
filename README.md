@@ -14,3 +14,9 @@ libavcodec-57
 libavformat-57
 libswscale-4
 libswresample-2
+
+Others
+------
+* MoviePy / ImageIO
+* PyAV
+* pyFFmpeg
