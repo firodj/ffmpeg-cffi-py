@@ -7,13 +7,18 @@ class Stream(object):
 	def __init__(self, av_stream):
 		self.av_stream = av_stream
 		self.metadata = Dict(self.av_stream.metadata)
-		self.coder = None
 		self.codec_ctx = None
 
 	@classmethod
 	def _decoded(cls, av_stream):
 		stream = cls(av_stream)
 		stream.codec_ctx = CodecCtx._decoded(av_stream.codec)
+		return stream
+
+	@classmethod
+	def _encoded(cls, av_stream):
+		stream = cls(av_stream)
+		stream.codec_ctx = CodecCtx._encoded(av_stream.codec)
 		return stream
 
 	@property

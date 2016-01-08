@@ -36,6 +36,13 @@ class CodecCtx(object):
 			ctx.coder = Coder.find_decoder( ctx.av_codec_ctx.codec_id )
 		return ctx
 
+	@classmethod
+	def _encoded(cls, av_codec_ctx):
+		ctx = cls._new(av_codec_ctx)
+		if ctx:
+			ctx.coder = Coder.create( av_codec_ctx.codec )
+		return ctx
+
 	def __init__(self, av_codec_ctx):
 		self.av_codec_ctx = av_codec_ctx
 		self.is_allocated = False
@@ -81,6 +88,10 @@ class CodecCtx(object):
 	def bits_per_sample(self):
 		return self.av_codec_ctx.bits_per_raw_sample
 
+	@property
+	def time_base(self):
+	    return rational( self.av_codec_ctx.time_base )
+	
 	def clone(self):
 		codec_ctx = CodecCtx.create(self.coder)
 		if codec_ctx:

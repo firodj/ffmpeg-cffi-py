@@ -3,12 +3,14 @@ from .dict import Dict
 from .stream import Stream
 from .frame import VideoFrame, AudioFrame
 from .packet import Packet
+from .coder import Coder
 
 class FormatCtx(object):
 	
 	def __init__(self, av_format_ctx):
 		self.av_format_ctx = av_format_ctx
 		self.metadata = Dict(self.av_format_ctx.metadata)
+		self.filepath = None
 
 		self.video_stream = None
 		self.audio_stream = None
@@ -32,19 +34,26 @@ class FormatCtx(object):
 		format_ctx = InputFormat(ref[0])
 		format_ctx._init_streams()
 		format_ctx._guess_aspect_ratio()
+
+		format_ctx.filepath = path
 		return format_ctx
 	
 	@classmethod
 	def create(cls, path=None, format=None):
 		if type(path) == unicode:
 			path = path.encode('utf-8')
+		if format is None:
+			format = NULL
 			
 		ref = ffi.new('struct AVFormatContext **')
 		err = avformat.avformat_alloc_output_context2(ref, NULL, format, path)
 		if err: return None
 		if ref[0] == NULL: return
 		
-		return OutputFormat(ref[0])
+		format_ctx = OutputFormat(ref[0])
+		format_ctx.filepath = path
+
+		return format_ctx
 	
 	@property
 	def nb_streams(self):
@@ -68,8 +77,8 @@ class FormatCtx(object):
 		d = dict(
 			#filepath = self.filepath,
 			nb_streams   = self.nb_streams,
-			#start_time   = fmt_q2timestr(self.av_format_ctx.start_time, lib_avutil.av_get_time_base_q()),
-			#duration     = fmt_q2timestr(self.av_format_ctx.duration, lib_avutil.av_get_time_base_q()),
+			#start_time   = fmt_q2timestr(self.av_format_ctx.start_time, avutil.av_get_time_base_q()),
+			#duration     = fmt_q2timestr(self.av_format_ctx.duration, avutil.av_get_time_base_q()),
 			bit_rate     = existent( self.bit_rate ),
 			
 			name         = self.long_name,
@@ -217,9 +226,91 @@ class InputFormat(FormatCtx):
 			
 class OutputFormat(FormatCtx):
 
+	def close(self):
+		if self.av_format_ctx != NULL:
+			avformat.avformat_free_context(self.av_format_ctx)
+			self.av_format_ctx = NULL
+
 	def new_stream(self, codec_id):
 		encoder = Coder.find_encoder(codec_id)
-		av_stream = avformat.avformat_new_stream(self.av_format_ctx, encoder.av_codec)
+		av_stream = avformat.avformat_new_stream(self.av_format_ctx, encoder.av_coder)
+		stream = Stream._encoded( av_stream )
+		return stream
+
+	def create_video_stream(self, v_codec_id=avcodec.AV_CODEC_ID_NONE):
+		if v_codec_id == avcodec.AV_CODEC_ID_NONE:
+			v_codec_id = self.av_format_ctx.oformat.video_codec
+		if v_codec_id == avcodec.AV_CODEC_ID_NONE:
+			return None
+		
+		video_stream = self.new_stream( v_codec_id )
+
+		self.video_stream = video_stream
+		self.video_codec_ctx = video_stream.codec_ctx
+		self.streams.append(self.video_stream)
+
+		v_encoder_ctx = self.video_codec_ctx.av_codec_ctx
+
+		assert video_stream.av_stream == self.av_format_ctx.streams[ video_stream.index ]
+		assert "video" == video_stream.codec_ctx.type
+
+		v_encoder_ctx.bit_rate = 400000
+		
+		v_encoder_ctx.width = 352
+		v_encoder_ctx.height = 288
+		v_encoder_ctx.qmin = 4
+		v_encoder_ctx.qmax = 63
+
+		v_encoder_ctx.gop_size      = 12 
+		v_encoder_ctx.pix_fmt = avutil.AV_PIX_FMT_YUV420P
+		
+		v_encoder_ctx.framerate.num = 25
+		v_encoder_ctx.framerate.den = 1
+		
+		v_encoder_ctx.time_base.num = v_encoder_ctx.framerate.den
+		v_encoder_ctx.time_base.den = v_encoder_ctx.framerate.num
+		video_stream.av_stream.time_base = v_encoder_ctx.time_base
+
+		if v_encoder_ctx.codec_id == avcodec.AV_CODEC_ID_MPEG2VIDEO:
+			v_encoder_ctx.max_b_frames = 2
+
+		if v_encoder_ctx.codec_id == avcodec.AV_CODEC_ID_MPEG1VIDEO:
+			v_encoder_ctx.mb_decision = 2
+
+		if (self.av_format_ctx.oformat.flags & avformat.AVFMT_GLOBALHEADER) != 0:
+			v_encoder_ctx.flags |= avcodec.AV_CODEC_FLAG_GLOBAL_HEADER
+
+	def create_audio_stream(self, a_codec_id=avcodec.AV_CODEC_ID_NONE):
+		if a_codec_id == avcodec.AV_CODEC_ID_NONE:
+			a_codec_id = self.av_format_ctx.oformat.audio_codec
+		if a_codec_id == avcodec.AV_CODEC_ID_NONE:
+			return None
+		
+		audio_stream = self.new_stream( a_codec_id )
+		
+		self.audio_stream = audio_stream
+		self.audio_codec_ctx = self.audio_stream.codec_ctx
+		self.streams.append(self.audio_stream)
+
+		a_encoder_ctx = self.audio_codec_ctx.av_codec_ctx
+
+		assert audio_stream.av_stream == self.av_format_ctx.streams[audio_stream.index]
+		assert "audio" == audio_stream.codec_ctx.type
+		
+		a_encoder_ctx.sample_fmt  = avutil.AV_SAMPLE_FMT_FLT
+	
+		a_encoder_ctx.bit_rate    = 64000
+		a_encoder_ctx.sample_rate = 48000
+
+		a_encoder_ctx.channel_layout = avutil.AV_CH_LAYOUT_STEREO
+		
+		a_encoder_ctx.channels = avutil.av_get_channel_layout_nb_channels(a_encoder_ctx.channel_layout)
+		a_encoder_ctx.time_base.num = 1
+		a_encoder_ctx.time_base.den = a_encoder_ctx.sample_rate
+		audio_stream.av_stream.time_base = a_encoder_ctx.time_base
+
+		if (self.av_format_ctx.oformat.flags & avformat.AVFMT_GLOBALHEADER) != 0:
+			a_encoder_ctx.flags |= avcodec.AV_CODEC_FLAG_GLOBAL_HEADER
 
 	@property
 	def name(self):
@@ -229,4 +320,206 @@ class OutputFormat(FormatCtx):
 	def long_name(self):
 	    return stringify( self.av_format_ctx.oformat.long_name )
 
+	def __init__(self, *args, **kwargs):
+		super(OutputFormat, self).__init__(*args, **kwargs)
 
+	def open_encoder(self):
+	 	if self.video_codec_ctx:
+			self.video_codec_ctx.open()
+
+			self.v_next_pts = 0
+
+			self.picture = avutil.av_frame_alloc()
+
+			self.picture.format = self.video_codec_ctx.av_codec_ctx.pix_fmt
+			self.picture.width  = self.video_codec_ctx.av_codec_ctx.width
+			self.picture.height = self.video_codec_ctx.av_codec_ctx.height
+
+			ret = avutil.av_frame_get_buffer(self.picture, 32)
+			if ret < 0:
+				raise Exception
+
+		if self.audio_codec_ctx:
+			self.audio_codec_ctx.open()
+
+			if (self.audio_codec_ctx.coder.av_coder.capabilities & avcodec.AV_CODEC_CAP_VARIABLE_FRAME_SIZE) != 0:
+				nb_samples = 10000
+			else:
+				nb_samples = self.audio_codec_ctx.av_codec_ctx.frame_size
+			
+			self.a_next_pts = 0
+
+			self.sound = avutil.av_frame_alloc()
+			
+			self.sound.format         = self.audio_codec_ctx.av_codec_ctx.sample_fmt
+			self.sound.channel_layout = self.audio_codec_ctx.av_codec_ctx.channel_layout
+			self.sound.sample_rate    = self.audio_codec_ctx.av_codec_ctx.sample_rate
+			self.sound.nb_samples     = nb_samples
+			
+			#if nb_samples:
+			ret = avutil.av_frame_get_buffer(self.sound, 0)
+			if ret < 0:
+				raise Exception()
+
+	def close_encoder(self):
+		ref = ffi.new('AVFrame**')
+
+		if self.video_codec_ctx:
+			self.video_codec_ctx.close()
+			self.video_codec_ctx = None
+
+			if self.picture != NULL:
+				ref[0] = self.picture
+				avutil.av_frame_free(ref)
+				self.picture = ref[0]
+
+		if self.audio_codec_ctx:
+			self.audio_codec_ctx.close()
+			self.audio_codec_ctx = None
+
+			if self.sound != NULL:
+				ref[0] = self.sound
+				avutil.av_frame_free(ref)
+				self.sound = ref[0]
+
+	@property
+	def a_next_pts_f(self):
+		return self.a_next_pts * float(self.audio_codec_ctx.time_base)
+
+	@property
+	def v_next_pts_f(self):
+		return self.v_next_pts * float(self.video_codec_ctx.time_base)
+
+	def write_header(self):
+		avformat.av_dump_format(self.av_format_ctx, 0, self.filepath, 1)
+
+		if (self.av_format_ctx.oformat.flags & avformat.AVFMT_NOFILE) == 0:
+			pb = ffi.new('AVIOContext **')
+
+			#ret = avformat.avio_open_dyn_buf(pb)
+
+			ret = avformat.avio_open(pb, self.filepath, avformat.AVIO_FLAG_WRITE)
+			if ret < 0:
+				raise Exception()
+
+			self.av_format_ctx.pb = pb[0]
+
+		ret = avformat.avformat_write_header(self.av_format_ctx, NULL)
+		if ret < 0:
+			raise Exception()
+
+	def write_trailer(self):
+		avformat.av_write_trailer(self.av_format_ctx)
+
+		#pbuffer = ffi.new('uint8_t **')
+		#length = avformat.avio_close_dyn_buf(self.av_format_ctx.pb, pbuffer)
+		#b = ffi.buffer(pbuffer, length)
+		#open('tests/logs/test.webm', 'wb').write(b)
+		#avutil.av_free(pbuffer)
+		
+		if (self.av_format_ctx.oformat.flags & avformat.AVFMT_NOFILE) == 0:
+			avformat.avio_close(self.av_format_ctx.pb)
+			self.av_format_ctx.pb = NULL
+
+	def write_video_frame(self):
+		if not self.video_stream: return
+
+		av_frame = self.picture
+		
+		ret = avutil.av_frame_make_writable(av_frame)
+		
+		av_frame.pts = self.v_next_pts
+		self.v_next_pts += 1
+
+		got_packet = ffi.new('int*')
+		got_packet[0] = 0
+
+		pkt = Packet()
+		pkt.reset()
+		pkt.init()
+
+		ret = avcodec.avcodec_encode_video2(self.video_codec_ctx.av_codec_ctx, pkt.av_packet, av_frame, got_packet)
+		if ret < 0:
+			raise Exception()
+			
+		if got_packet[0]:
+			self._write_video_packet(pkt)
+			return True
+
+	def _write_video_packet(self, pkt):
+		avcodec.av_packet_rescale_ts(pkt.av_packet, self.video_codec_ctx.av_codec_ctx.time_base, self.video_stream.av_stream.time_base)
+		pkt.stream = self.video_stream
+
+		print pkt
+
+		ret = avformat.av_interleaved_write_frame(self.av_format_ctx, pkt.av_packet)
+
+		pkt.unref()
+
+	def flush_video_frame(self):
+		got_packet = ffi.new('int*')
+		got_packet[0] = 0
+
+		pkt = Packet()
+		pkt.reset()
+		pkt.init()
+
+		while True:
+			ret = avcodec.avcodec_encode_video2(self.video_codec_ctx.av_codec_ctx, pkt.av_packet, NULL, got_packet)
+			if ret < 0:
+				raise Exception()
+			if got_packet[0]:
+				self._write_video_packet(pkt)
+			else:
+				break
+
+	def flush_audio_frame(self):
+		got_packet = ffi.new('int*')
+		got_packet[0] = 0
+
+		pkt = Packet()
+		pkt.reset()
+		pkt.init()
+
+		while True:
+			ret = avcodec.avcodec_encode_audio2(self.audio_codec_ctx.av_codec_ctx, pkt.av_packet, NULL, got_packet)
+			if ret < 0:
+				raise Exception()
+			if got_packet[0]:
+				self._write_audio_packet(pkt)
+			else:
+				break
+	
+	def _write_audio_packet(self, pkt):
+		avcodec.av_packet_rescale_ts(pkt.av_packet, self.audio_codec_ctx.av_codec_ctx.time_base, self.audio_stream.av_stream.time_base)
+		pkt.stream = self.audio_stream
+
+		print pkt
+
+		ret = avformat.av_interleaved_write_frame(self.av_format_ctx, pkt.av_packet)
+		pkt.unref()
+
+	def write_audio_frame(self):
+		if not self.audio_stream: return
+
+		av_frame = self.sound
+		
+		ret = avutil.av_frame_make_writable(av_frame)
+		
+		av_frame.pts = self.a_next_pts
+		self.a_next_pts += av_frame.nb_samples
+	
+		got_packet = ffi.new('int*')
+		got_packet[0] = 0
+		
+		pkt = Packet()
+		pkt.reset()
+		pkt.init()
+
+		ret = avcodec.avcodec_encode_audio2(self.audio_codec_ctx.av_codec_ctx, pkt.av_packet, av_frame, got_packet);
+		if ret < 0:
+			raise Exception()
+			
+		if got_packet[0]:
+			self._write_audio_packet(pkt)
+			return True

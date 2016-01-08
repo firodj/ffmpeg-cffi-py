@@ -71,7 +71,8 @@ class Packet(object):
 		self.av_packet.data += size
 
 	def __repr__(self):
-		return "<%s %d stream=%d %s>" % (self.__class__.__name__,
+		return "<%s %d stream=%d pts=%d %s>" % (self.__class__.__name__,
 			self.size,
 			self.av_packet.stream_index,
+			self.av_packet.pts,
 			repr(self.av_packet))

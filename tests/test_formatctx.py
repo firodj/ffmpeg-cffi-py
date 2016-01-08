@@ -29,7 +29,7 @@ def test_open_input(setup):
 	img = None
 
 	for frame in fmt_ctx.next_frame():
-
+ 
 		t = float(frame.pkt_pts_f)
 		if frame.type == 'video' and t >= 15.0:
 			img = frame.process()
@@ -38,3 +38,32 @@ def test_open_input(setup):
 	fmt_ctx.close_decoder()
 
 	if img: img.show()
+
+def test_create_output(setup):
+	path_out = 'tests/logs/output.webm'
+
+	fmt_ctx = FormatCtx.create(path_out)
+
+	fmt_ctx.create_video_stream()
+	fmt_ctx.create_audio_stream()
+
+	fmt_ctx.open_encoder()
+
+	fmt_ctx.write_header()
+
+	while fmt_ctx.v_next_pts_f <= 1.0:
+		if fmt_ctx.v_next_pts_f <= fmt_ctx.a_next_pts_f:
+			fmt_ctx.write_video_frame()
+		else:
+			fmt_ctx.write_audio_frame()
+
+		if fmt_ctx.v_next_pts_f <= fmt_ctx.a_next_pts_f:
+			fmt_ctx.flush_video_frame()
+			fmt_ctx.flush_audio_frame()
+		else:
+			fmt_ctx.flush_audio_frame()
+			fmt_ctx.flush_video_frame()
+
+	fmt_ctx.write_trailer()
+
+	fmt_ctx.close_encoder()
