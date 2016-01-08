@@ -116,6 +116,18 @@ class VideoCoder(Coder):
 
 		if len(values):	return values
 
+	def __repr__(self):
+		if self.is_descriptor():
+			n = "VideoDescriptor"
+		elif self.is_encoder():
+			n = "VideoEncoder"
+		elif self.is_decoder():
+			n = "VideoDecoder"
+		else:
+			n = "VideoCoder"
+
+		return "<%s: %s>" % (n, self.long_name)
+
 class AudioCoder(Coder):
 
 	def supported_samplerates(self):
@@ -153,3 +165,15 @@ class AudioCoder(Coder):
 			values.append(stringify(val_str))
 
 		if len(values):	return values
+
+	def __repr__(self):
+		if self.is_descriptor():
+			n = "AudioDescriptor"
+		elif self.is_encoder():
+			n = "AudioEncoder"
+		elif self.is_decoder():
+			n = "AudioDecoder"
+		else:
+			n = "AudioCoder"
+
+		return "<%s: %s>" % (n, self.long_name)

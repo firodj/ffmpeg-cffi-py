@@ -23,16 +23,18 @@ def test_open_input(setup):
 	print fmt_ctx
 
 	fmt_ctx.open_decoder()
-	print fmt_ctx.video_codec_ctx
-	print fmt_ctx.audio_codec_ctx
+	print fmt_ctx.video_codec_ctx, fmt_ctx.video_codec_ctx.coder
+	print fmt_ctx.audio_codec_ctx, fmt_ctx.audio_codec_ctx.coder
+
+	img = None
 
 	for frame in fmt_ctx.next_frame():
 
 		t = float(frame.pkt_pts_f)
-		print t, frame.type
-
-		if frame.type == 'video' and t >= 5.0:
-			#img = frame.process()
+		if frame.type == 'video' and t >= 15.0:
+			img = frame.process()
 			break
 
 	fmt_ctx.close_decoder()
+
+	if img: img.show()

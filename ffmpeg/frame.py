@@ -1,4 +1,5 @@
 from .lib import *
+from PIL import Image
 
 class Frame(object):
 
@@ -80,7 +81,7 @@ class VideoFrame(Frame):
 		if height is None:
 			height = self.height
 		
-		pix_fmt = "rgb"
+		pix_fmt = "rgb24"
 
 		img = None
 
@@ -92,7 +93,7 @@ class VideoFrame(Frame):
 			avutil.av_get_pix_fmt( pix_fmt ),
 			swscale.SWS_BICUBIC,
 			NULL, NULL, NULL)
-		
+				
 		if sws_ctx != NULL:
 			image_rgb = ffi.new('struct AVPicture *')
 
@@ -109,10 +110,10 @@ class VideoFrame(Frame):
 				image_rgb.data,
 				image_rgb.linesize)
 
-			length = image_rgb.linesize[0] * self.target_height
-			b = ffi.buffer(image_rgb.data[0], length)		
+			length = image_rgb.linesize[0] * height
+			b = ffi.buffer(image_rgb.data[0], length)
 			img = Image.frombuffer('RGB', (image_rgb.linesize[0]//3,
-				self.target_height),
+				height),
 				b, 'raw',
 				'RGB', 0, 1)
 

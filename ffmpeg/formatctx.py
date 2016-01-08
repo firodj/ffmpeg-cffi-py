@@ -81,10 +81,9 @@ class FormatCtx(object):
 		return d
 
 	def __repr__(self):
-		return "<%s: '%s' %d streams %s %s %s>" % (self.__class__.__name__,
+		return "<%s: %s, %d streams %s %s>" % (self.__class__.__name__,
 			self.long_name,
 			self.nb_streams,
-			self.aspect_ratio,
 			repr(self.metadata.to_primitive()),
 			repr(self.av_format_ctx)
 			)
