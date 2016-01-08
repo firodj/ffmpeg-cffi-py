@@ -99,6 +99,9 @@ class CodecCtx(object):
 			return avcodec.avcodec_is_open(self.av_codec_ctx) != 0
 		return None
 
+	def __repr__(self):
+		return "<%s: %s %s>" % (self.__class__.__name__, self.type, repr(self.av_codec_ctx))
+
 class VideoCodecCtx(CodecCtx):
 
 	@property
@@ -141,13 +144,14 @@ class VideoCodecCtx(CodecCtx):
 		)
 		return d
 
-class AudioCodecCtx(CodecCtx):
+	def __repr__(self):
+		return "<%s: %d x %d %s %s>" % (self.__class__.__name__,
+			self.width,
+			self.height,
+			self.pix_fmt,
+			repr(self.av_codec_ctx))
 
-	@property
-	def channel_layout(self):
-		val_str = ffi.new('char[128]')
-		avutil.av_get_channel_layout_string(val_str, ffi.sizeof(val_str), self.av_codec_ctx.channels, self.av_codec_ctx.channel_layout)
-		return stringify(val_str)
+class AudioCodecCtx(CodecCtx):
 	
 	@property
 	def sample_fmt(self):
@@ -161,6 +165,12 @@ class AudioCodecCtx(CodecCtx):
 	def channels(self):
 		return self.av_codec_ctx.channels
 
+	@property
+	def channel_layout(self):
+		val_str = ffi.new('char[128]')
+		avutil.av_get_channel_layout_string(val_str, ffi.sizeof(val_str), self.av_codec_ctx.channels, self.av_codec_ctx.channel_layout)
+		return stringify(val_str)
+
 	def to_primitive(self):
 		d = dict(
 			sample_fmt  = self.sample_fmt,
@@ -169,3 +179,11 @@ class AudioCodecCtx(CodecCtx):
 			channel_layout  = self.channel_layout
 		)
 		return d
+
+	def __repr__(self):
+		return "<%s: %d hz %s %s %s>" % (self.__class__.__name__,
+			self.sample_rate,
+			self.sample_fmt,
+			self.channel_layout,
+			repr(self.av_codec_ctx)
+			)

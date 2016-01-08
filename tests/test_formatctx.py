@@ -16,8 +16,23 @@ def setup():
 def test_open_input(setup):
 	# LOCAL TEST ONLY
 	path = 'tests/data/film佐伯.mp4'
-	ctx = FormatCtx.open(path)
+	fmt_ctx = FormatCtx.open(path)
 
-	assert InputFormat == type(ctx)
+	assert InputFormat == type(fmt_ctx)
 
-	pp( ctx.to_primitive(True) )
+	print fmt_ctx
+
+	fmt_ctx.open_decoder()
+	print fmt_ctx.video_codec_ctx
+	print fmt_ctx.audio_codec_ctx
+
+	for frame in fmt_ctx.next_frame():
+
+		t = float(frame.pkt_pts_f)
+		print t, frame.type
+
+		if frame.type == 'video' and t >= 5.0:
+			#img = frame.process()
+			break
+
+	fmt_ctx.close_decoder()

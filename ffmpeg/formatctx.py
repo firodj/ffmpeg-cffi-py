@@ -1,6 +1,8 @@
 from .lib import *
 from .dict import Dict
 from .stream import Stream
+from .frame import VideoFrame, AudioFrame
+from .packet import Packet
 
 class FormatCtx(object):
 	
@@ -78,14 +80,23 @@ class FormatCtx(object):
 			d['streams'] = [s.to_primitive() for s in self.streams]
 		return d
 
+	def __repr__(self):
+		return "<%s: '%s' %d streams %s %s %s>" % (self.__class__.__name__,
+			self.long_name,
+			self.nb_streams,
+			self.aspect_ratio,
+			repr(self.metadata.to_primitive()),
+			repr(self.av_format_ctx)
+			)
 	
 class InputFormat(FormatCtx):
 
 	def close(self):
-		ref = ffi.new('AVFormatContext **')
-		ref[0] = self.av_format_ctx
-		avformat.avformat_close_input(ref)
-		self.av_format_ctx = ref[0]
+		if self.av_format_ctx != NULL:
+			ref = ffi.new('AVFormatContext **')
+			ref[0] = self.av_format_ctx
+			avformat.avformat_close_input(ref)
+			self.av_format_ctx = ref[0]
 
 	def _init_streams(self):
 		err = avformat.avformat_find_stream_info(self.av_format_ctx, NULL)
@@ -118,18 +129,27 @@ class InputFormat(FormatCtx):
 
 			self.aspect_ratio = rational( dar )
 
-	def _open_decoder(self):
+	def open_decoder(self):
 		if self.video_stream and not self.video_codec_ctx:
 			video_codec_ctx = self.video_stream.codec_ctx.clone()
 			if video_codec_ctx:
-				if video_codec_ctx.open( self.video_stream.codec_ctx.coder ):
+				if video_codec_ctx.open(): #self.video_stream.codec_ctx.coder 
 					self.video_codec_ctx = video_codec_ctx
 
 		if self.audio_stream and not self.audio_codec_ctx:
 			audio_codec_ctx = self.audio_stream.codec_ctx.clone()
 			if audio_codec_ctx:
-				if audio_codec_ctx.open( self.audio_stream.codec_ctx.coder ):
+				if audio_codec_ctx.open(): #self.audio_stream.codec_ctx.coder 
 					self.audio_codec_ctx = audio_codec_ctx
+
+	def close_decoder(self):
+		if self.video_codec_ctx:
+			self.video_codec_ctx.close()
+			self.video_codec_ctx = None
+			
+		if self.audio_codec_ctx:
+			self.audio_codec_ctx.close()
+			self.audio_codec_ctx = None
 
 	@property
 	def name(self):
@@ -139,12 +159,62 @@ class InputFormat(FormatCtx):
 	def long_name(self):
 	    return stringify( self.av_format_ctx.iformat.long_name )
 	
-	def reading_frames(self):
+	def next_frame(self):
 		pkt = Packet()
+		do_next = False
 
 		while avformat.av_read_frame(self.av_format_ctx, pkt.av_packet) >= 0:
-			pass
-			#TODO
+			while pkt.size > 0:
+				(do_next, frame) = self._decode_pkt(pkt)
+				if frame is not None:
+					yield frame
+				if not do_next: break
+			pkt.unref()
+
+		pkt.reset()
+
+		while True:
+			(do_next, frame) = self._decode_pkt(pkt)
+			if frame is not None: 
+				yield frame
+			if not do_next: break
+
+	def _decode_pkt(self, pkt):
+		if self.video_codec_ctx and pkt.stream_eq(self.video_stream):
+			return self._decode_video(pkt)
+		elif self.audio_codec_ctx and pkt.stream_eq(self.audio_stream):
+			return self._decode_audio(pkt)
+
+		return (0, None)
+
+	def _decode_video(self, pkt):
+		got_frame = ffi.new('int*')
+		got_frame[0] = 0
+		frame = VideoFrame()
+
+		size = avcodec.avcodec_decode_video2(self.video_codec_ctx.av_codec_ctx, frame.av_frame, got_frame, pkt.av_packet)
+
+		pkt.consume(size)
+
+		if got_frame[0]:
+			frame.stream = pkt.stream
+			return (size, frame)
+
+		return (size, None)
+
+	def _decode_audio(self, pkt):
+		got_frame = ffi.new('int*')
+		got_frame[0] = 0
+		frame = AudioFrame()
+
+		size = avcodec.avcodec_decode_audio4(self.audio_codec_ctx.av_codec_ctx, frame.av_frame, got_frame, pkt.av_packet)
+		pkt.consume(size)
+
+		if got_frame[0]:
+			frame.stream = pkt.stream
+			return (size, frame)
+
+		return (size, None)
 			
 class OutputFormat(FormatCtx):
 

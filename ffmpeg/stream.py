@@ -17,6 +17,10 @@ class Stream(object):
 		return stream
 
 	@property
+	def type(self):
+		return self.codec_ctx.type
+
+	@property
 	def is_default(self):
 		return (self.av_stream.disposition & avformat.AV_DISPOSITION_DEFAULT) != 0
 		
@@ -32,7 +36,8 @@ class Stream(object):
 	def start_time(self):
 		return None if self.av_stream.start_time == ffi.cast('int64_t',avutil.AV_NOPTS_VALUE) else self.av_stream.start_time
 
-	def start_time_d(self):
+	@property
+	def start_time_f(self):
 		if self.start_time is None or self.time_base is None: return None
 		return float(self.start_time) * self.time_base
 
@@ -40,7 +45,8 @@ class Stream(object):
 	def duration(self):
 		return None if self.av_stream.duration == ffi.cast('int64_t',avutil.AV_NOPTS_VALUE) else self.av_stream.duration
 
-	def duration_d(self):
+	@property
+	def duration_f(self):
 		if self.duration is None or self.time_base is None: return None
 		return float(self.duration) * self.time_base
 

@@ -4,6 +4,7 @@ class Packet(object):
 	
 	def __init__(self):
 		self.av_packet = avcodec.av_packet_alloc()
+		self._stream = None
 		self.reset()		
 	
 	def __del__(self):
@@ -27,11 +28,17 @@ class Packet(object):
 		
 	@property
 	def stream(self):
-		return self.stream
+		return self._stream
 	@stream.setter
 	def stream(self, v):
-		self.stream = v
-		self.av_packet.stream_index = self.stream.index
+		self._stream = v
+		self.av_packet.stream_index = self._stream.index
+
+	def stream_eq(self, stream):
+		if self.av_packet.stream_index == stream.index:
+			self._stream = stream
+			return True
+		return False
 
 	@property
 	def pts(self):
@@ -58,4 +65,13 @@ class Packet(object):
 	@property
 	def size(self):
 		return self.av_packet.size
-	
+
+	def consume(self, size):
+		self.av_packet.size -= size
+		self.av_packet.data += size
+
+	def __repr__(self):
+		return "<%s %d stream=%d %s>" % (self.__class__.__name__,
+			self.size,
+			self.av_packet.stream_index,
+			repr(self.av_packet))
