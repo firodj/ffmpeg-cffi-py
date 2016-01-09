@@ -44,7 +44,7 @@ class Stream(object):
 	
 	@property
 	def start_time(self):
-		return None if self.av_stream.start_time == ffi.cast('int64_t',avutil.AV_NOPTS_VALUE) else self.av_stream.start_time
+		return None if self.av_stream.start_time == int(ffi.cast('int64_t',avutil.AV_NOPTS_VALUE)) else self.av_stream.start_time
 
 	@property
 	def start_time_f(self):
@@ -53,7 +53,7 @@ class Stream(object):
 
 	@property
 	def duration(self):
-		return None if self.av_stream.duration == ffi.cast('int64_t',avutil.AV_NOPTS_VALUE) else self.av_stream.duration
+		return None if self.av_stream.duration == int(ffi.cast('int64_t',avutil.AV_NOPTS_VALUE)) else self.av_stream.duration
 
 	@property
 	def duration_f(self):

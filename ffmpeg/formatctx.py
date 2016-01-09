@@ -190,11 +190,10 @@ class InputFormat(FormatCtx):
 	    return stringify( self.av_format_ctx.iformat.long_name )
 	
 	def next_frame(self):
-		pkt = Packet()
-		do_next = False
+		pkt = Packet()	
 
-		while avformat.av_read_frame(self.av_format_ctx, pkt.av_packet) >= 0:
-			while pkt.size > 0:
+		while avformat.av_read_frame(self.av_format_ctx, pkt.av_packet) >= 0:			
+			while pkt.size > 0:				
 				(do_next, frame) = self._decode_pkt(pkt)
 				if frame is not None:
 					yield frame
@@ -223,8 +222,16 @@ class InputFormat(FormatCtx):
 		frame = VideoFrame()
 
 		size = avcodec.avcodec_decode_video2(self.video_codec_ctx.av_codec_ctx, frame.av_frame, got_frame, pkt.av_packet)
+		if size < 0:
+			val_str = ffi.new('char[128]')
+			avutil.av_strerror(size, val_str, ffi.sizeof(val_str))
+			raise Exception( stringify(val_str) )
 
-		pkt.consume(size)
+		if pkt.size != size:
+			# print "Warning: decoded size differ", abs(pkt.size - size)
+			pkt.consume(pkt.size)
+		else:
+			pkt.consume(size)
 
 		if got_frame[0]:
 			frame.stream = pkt.stream
@@ -238,6 +245,11 @@ class InputFormat(FormatCtx):
 		frame = AudioFrame()
 
 		size = avcodec.avcodec_decode_audio4(self.audio_codec_ctx.av_codec_ctx, frame.av_frame, got_frame, pkt.av_packet)
+		if size < 0:
+			val_str = ffi.new('char[128]')
+			avutil.av_strerror(size, val_str, ffi.sizeof(val_str))
+			raise Exception( stringify(val_str) )
+
 		pkt.consume(size)
 
 		if got_frame[0]:
