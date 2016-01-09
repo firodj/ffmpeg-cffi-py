@@ -31,7 +31,12 @@ class Stream(object):
 		
 	@property
 	def frame_rate(self):
-		return q2d(avformat.av_stream_get_r_frame_rate(self.av_stream))
+		return rational( avformat.av_stream_get_r_frame_rate(self.av_stream) )
+
+	@property
+	def frame_rate_f(self):
+		if self.frame_rate is None: return None
+		return float(self.frame_rate)
 
 	@property
 	def nb_frames(self):
@@ -67,8 +72,8 @@ class Stream(object):
 		d = dict(
 			type     = self.codec_ctx.type,
 			metadata = self.metadata.to_primitive(['language', 'title']),
-			start_time = fmt_q2timestr(self.av_stream.start_time, self.av_stream.time_base),
-			duration   = fmt_q2timestr(self.av_stream.duration, self.av_stream.time_base),
+			start_time = fmt_f2timestr(self.start_time_f),
+			duration   = fmt_f2timestr(self.duration_f),
 			nb_frames  = existent(self.nb_frames),
 			codec_tag  = self.codec_ctx.codec_tag,
 			codec_name = self.codec_ctx.coder.long_name,
@@ -78,7 +83,7 @@ class Stream(object):
 		)
 
 		if self.codec_ctx.type == 'video':
-			d['frame_rate'] = self.frame_rate
+			d['frame_rate'] = self.frame_rate_f
 
 		if self.codec_ctx.type == 'audio':
 			pass

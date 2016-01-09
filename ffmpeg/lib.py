@@ -78,6 +78,12 @@ def fmt_d2timestr(ts):
 	bigs = ts * 1000.0 + 0.5
 	return fmt_timestr(bigs)
 
+def fmt_f2timestr(ts):
+	if ts is None: return None
+
+	bigs = int( float(ts * 1000) + 0.5 )
+	return fmt_timestr(bigs)
+
 def fmt_q2timestr(dur, tb):
 	if dur is None or tb is None or tb == avutil.AV_NOPTS_VALUE: return None
 
@@ -139,3 +145,7 @@ def correct_pix_fmt(pix_fmt):
 def rational(r):
 	if r.den == 0: return None
 	return Fraction(r.num, r.den)
+
+def time_base_q():
+	r = avutil.av_get_time_base_q()
+	return rational( r )

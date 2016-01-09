@@ -26,6 +26,8 @@ def test_open_input(setup):
 	print fmt_ctx.video_codec_ctx, fmt_ctx.video_codec_ctx.coder
 	print fmt_ctx.audio_codec_ctx, fmt_ctx.audio_codec_ctx.coder
 
+	pp( fmt_ctx.to_primitive(True) )
+
 	img = None
 
 	for frame in fmt_ctx.next_frame():

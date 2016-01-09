@@ -72,13 +72,35 @@ class FormatCtx(object):
 	@property
 	def bit_rate(self):
 	    return self.av_format_ctx.bit_rate
-	
+
+	@property
+	def start_time(self):
+		return None if self.av_format_ctx.start_time == ffi.cast('int64_t',avutil.AV_NOPTS_VALUE) else self.av_format_ctx.start_time
+
+	@property
+	def start_time_f(self):
+		if self.start_time is None or self.time_base is None: return None
+		return float(self.start_time) * self.time_base
+
+	@property
+	def duration(self):
+		return None if self.av_format_ctx.duration == ffi.cast('int64_t',avutil.AV_NOPTS_VALUE) else self.av_format_ctx.duration
+
+	@property
+	def duration_f(self):
+		if self.duration is None or self.time_base is None: return None
+		return float(self.duration) * self.time_base
+
+	@property
+	def time_base(self):
+		return time_base_q()
+
 	def to_primitive(self, full=False):
 		d = dict(
 			#filepath = self.filepath,
 			nb_streams   = self.nb_streams,
-			#start_time   = fmt_q2timestr(self.av_format_ctx.start_time, avutil.av_get_time_base_q()),
-			#duration     = fmt_q2timestr(self.av_format_ctx.duration, avutil.av_get_time_base_q()),
+			start_time   = fmt_f2timestr(self.start_time_f),
+			duration     = fmt_f2timestr(self.duration_f),
 			bit_rate     = existent( self.bit_rate ),
 			
 			name         = self.long_name,
