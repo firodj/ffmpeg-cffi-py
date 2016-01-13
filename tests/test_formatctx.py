@@ -16,6 +16,7 @@ def setup():
 def test_open_input(setup):
 	# LOCAL TEST ONLY
 	path = 'tests/data/film佐伯.mp4'
+
 	fmt_ctx = FormatCtx.open(path)
 
 	assert InputFormat == type(fmt_ctx)
@@ -23,20 +24,23 @@ def test_open_input(setup):
 	print fmt_ctx
 
 	fmt_ctx.open_decoder()
-	print fmt_ctx.video_codec_ctx, fmt_ctx.video_codec_ctx.coder
-	print fmt_ctx.audio_codec_ctx, fmt_ctx.audio_codec_ctx.coder
+	#print fmt_ctx.video_codec_ctx, fmt_ctx.video_codec_ctx.coder
+	#print fmt_ctx.audio_codec_ctx, fmt_ctx.audio_codec_ctx.coder
 
 	pp( fmt_ctx.to_primitive(True) )
 
 	img = None
+	which_frame = None
 
 	for frame in fmt_ctx.next_frame():
  
 		t = float(frame.pkt_pts_f)
-		if frame.type == 'video' and t >= 15.0:
-			img = frame.process()
-			break
+		if frame.type == 'video':
+			which_frame = frame
+			if t >= 15.0:
+				break
 
+	if which_frame: img = which_frame.process()
 	fmt_ctx.close_decoder()
 
 	if img: img.show()

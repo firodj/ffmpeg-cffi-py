@@ -75,7 +75,7 @@ class FormatCtx(object):
 
 	@property
 	def start_time(self):
-		return None if self.av_format_ctx.start_time == ffi.cast('int64_t',avutil.AV_NOPTS_VALUE) else self.av_format_ctx.start_time
+		return None if self.av_format_ctx.start_time == int(ffi.cast('int64_t',avutil.AV_NOPTS_VALUE)) else self.av_format_ctx.start_time
 
 	@property
 	def start_time_f(self):
@@ -84,7 +84,7 @@ class FormatCtx(object):
 
 	@property
 	def duration(self):
-		return None if self.av_format_ctx.duration == ffi.cast('int64_t',avutil.AV_NOPTS_VALUE) else self.av_format_ctx.duration
+		return None if self.av_format_ctx.duration == int(ffi.cast('int64_t',avutil.AV_NOPTS_VALUE)) else self.av_format_ctx.duration
 
 	@property
 	def duration_f(self):
@@ -223,12 +223,11 @@ class InputFormat(FormatCtx):
 
 		size = avcodec.avcodec_decode_video2(self.video_codec_ctx.av_codec_ctx, frame.av_frame, got_frame, pkt.av_packet)
 		if size < 0:
-			val_str = ffi.new('char[128]')
-			avutil.av_strerror(size, val_str, ffi.sizeof(val_str))
-			raise Exception( stringify(val_str) )
+			print "Error:", str_error(size), pkt.size
+			return (0, None)
 
 		if pkt.size != size:
-			# print "Warning: decoded size differ", abs(pkt.size - size)
+			print "Warning: decoded size differ", abs(pkt.size - size)
 			pkt.consume(pkt.size)
 		else:
 			pkt.consume(size)
@@ -246,11 +245,14 @@ class InputFormat(FormatCtx):
 
 		size = avcodec.avcodec_decode_audio4(self.audio_codec_ctx.av_codec_ctx, frame.av_frame, got_frame, pkt.av_packet)
 		if size < 0:
-			val_str = ffi.new('char[128]')
-			avutil.av_strerror(size, val_str, ffi.sizeof(val_str))
-			raise Exception( stringify(val_str) )
+			print "Error:", str_error(size), pkt.size
+			return (0, None)
 
-		pkt.consume(size)
+		if pkt.size != size:
+			print "Warning: decoded size differ", abs(pkt.size - size)
+			pkt.consume(pkt.size)
+		else:
+			pkt.consume(size)
 
 		if got_frame[0]:
 			frame.stream = pkt.stream

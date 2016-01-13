@@ -71,7 +71,7 @@ class Stream(object):
 	def to_primitive(self):
 		d = dict(
 			type     = self.codec_ctx.type,
-			metadata = self.metadata.to_primitive(['language', 'title']),
+			metadata = self.metadata.to_primitive(),
 			start_time = fmt_f2timestr(self.start_time_f),
 			duration   = fmt_f2timestr(self.duration_f),
 			nb_frames  = existent(self.nb_frames),

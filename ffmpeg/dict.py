@@ -71,5 +71,5 @@ class Dict(object):
 			self._owned = True
 		self.av_dict = pm[0]
 
-	def to_primitive(self, filters = []):
-		return {k: v for k, v in self if len(filters) == 0 or k in filters}
+	def to_primitive(self):
+		return {k: v for k, v in self if not k.startswith('_')}

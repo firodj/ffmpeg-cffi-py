@@ -149,3 +149,8 @@ def rational(r):
 def time_base_q():
 	r = avutil.av_get_time_base_q()
 	return rational( r )
+
+def str_error(err):
+	val_str = ffi.new('char[128]')
+	avutil.av_strerror(err, val_str, ffi.sizeof(val_str))
+	return stringify(val_str)
