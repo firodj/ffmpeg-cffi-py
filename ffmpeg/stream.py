@@ -76,7 +76,7 @@ class Stream(object):
 			duration   = fmt_f2timestr(self.duration_f),
 			nb_frames  = existent(self.nb_frames),
 			codec_tag  = self.codec_ctx.codec_tag,
-			codec_name = self.codec_ctx.coder.long_name,
+			codec_name = self.codec_ctx.long_name,
 			profile    = self.codec_ctx.profile,
 			bit_rate   = existent( self.codec_ctx.bit_rate ),
 			bits_per_sample = existent( self.codec_ctx.bits_per_sample ),

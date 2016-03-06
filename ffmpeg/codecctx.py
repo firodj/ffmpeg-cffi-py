@@ -81,6 +81,10 @@ class CodecCtx(object):
 			return stringify(avcodec.av_get_profile_name(self.coder.av_coder, self.av_codec_ctx.profile))
 	
 	@property
+	def long_name(self):
+		if self.coder: return self.coder.long_name
+
+	@property
 	def bit_rate(self):
 		return self.av_codec_ctx.bit_rate
 
