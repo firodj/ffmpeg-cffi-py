@@ -110,6 +110,10 @@ class CodecCtx(object):
 			return avcodec.avcodec_is_open(self.av_codec_ctx) != 0
 		return None
 
+	def to_primitive(self):
+		d = dict()
+		return d
+
 	def __repr__(self):
 		return "<%s: %s %s>" % (self.__class__.__name__, self.type, repr(self.av_codec_ctx))
 
