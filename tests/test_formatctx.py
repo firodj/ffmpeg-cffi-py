@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import pytest
+import ffmpeg
 from ffmpeg.formatctx import *
 from ffmpeg.lib import *
 from fractions import Fraction
+from ffmpeg.error import FFMPEGException, AVERROR_STREAM_NOT_FOUND
 
 from pprint import pprint as pp
 
@@ -44,6 +46,19 @@ def test_open_input(setup):
 	fmt_ctx.close_decoder()
 
 	if img: img.show()
+
+
+def test_open_input_when_error(setup, mocker):
+	path = 'tests/data/film佐伯.mp4'
+
+	mocker.patch('ffmpeg.formatctx.avformat_open_input',
+		return_value=AVERROR_STREAM_NOT_FOUND)
+	
+	with pytest.raises(FFMPEGException) as excinfo:
+		fmt_ctx = FormatCtx.open(path)
+
+	assert "Stream not found" in excinfo.value.message
+
 
 def test_create_output(setup):
 	path_out = 'tests/logs/output.webm'

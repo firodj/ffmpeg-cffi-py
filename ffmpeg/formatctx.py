@@ -4,6 +4,9 @@ from .stream import Stream
 from .frame import VideoFrame, AudioFrame
 from .packet import Packet
 from .coder import Coder
+from .error import check_ret
+
+avformat_open_input = getattr(avformat, 'avformat_open_input')
 
 class FormatCtx(object):
 	
@@ -27,8 +30,8 @@ class FormatCtx(object):
 			path = path.encode('utf-8')
 	
 		ref = ffi.new('struct AVFormatContext **')
-		err = avformat.avformat_open_input(ref, path, NULL, NULL)
-		if err: return
+		check_ret(avformat_open_input(ref, path, NULL, NULL))
+
 		if ref[0] == NULL: return
 		
 		format_ctx = InputFormat(ref[0])
