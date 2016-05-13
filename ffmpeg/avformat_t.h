@@ -254,3 +254,8 @@ typedef struct AVFormatContext {
 #define AVIO_FLAG_READ  1                                      /**< read-only */
 #define AVIO_FLAG_WRITE 2                                      /**< write-only */
 #define AVIO_FLAG_READ_WRITE 3  /**< read-write pseudo flag */
+
+#define AVSEEK_FLAG_BACKWARD 1 ///< seek backward
+#define AVSEEK_FLAG_BYTE     2 ///< seeking based on position in bytes
+#define AVSEEK_FLAG_ANY      4 ///< seek to any frame, even non-keyframes
+#define AVSEEK_FLAG_FRAME    8 ///< seeking based on frame number

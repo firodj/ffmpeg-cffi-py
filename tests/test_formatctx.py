@@ -5,7 +5,7 @@ import ffmpeg
 from ffmpeg.formatctx import *
 from ffmpeg.lib import *
 from fractions import Fraction
-from ffmpeg.error import FFMPEGException, AVERROR_STREAM_NOT_FOUND
+#from ffmpeg.error import FFMPEGException, AVERROR_STREAM_NOT_FOUND
 
 from pprint import pprint as pp
 

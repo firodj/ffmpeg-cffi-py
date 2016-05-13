@@ -212,6 +212,16 @@ class InputFormat(FormatCtx):
                 yield frame
             if not do_next: break
 
+    def seek_frame(self, pos, stream_index=-1):
+        if type(pos) == int:
+            timestamp = pos
+        else:
+            tb = self.streams[stream_index].time_base if stream_index > -1 else self.time_base
+            timestamp = int(pos / tb)
+
+        return avformat.av_seek_frame(self.av_format_ctx, stream_index, timestamp, 
+            avformat.AVSEEK_FLAG_BACKWARD) >= 0
+
     def _decode_pkt(self, pkt):
         if self.video_codec_ctx and pkt.stream_eq(self.video_stream):
             return self._decode_video(pkt)
