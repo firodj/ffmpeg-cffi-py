@@ -1,4 +1,5 @@
 from .lib import *
+from six import text_type
 
 class Dict(object):
     def __init__(self, av_dict = NULL):
@@ -11,15 +12,15 @@ class Dict(object):
     def __setitem__(self, key, value):
         pm = ffi.new('AVDictionary *[1]')
         pm[0] = self.av_dict
-        
+
         if value is None:
             value = NULL
-        elif type(value) == unicode:
+        elif type(value) == text_type:
             value = value.encode('utf-8')
         elif type(value) != str:
-            value = str(value)
-        
-        err = avutil.av_dict_set(pm, key, value, 0)
+            value = str(value).encode('utf-8')
+
+        err = avutil.av_dict_set(pm, key.encode('utf-8'), value, 0)
         if err < 0:
             raise Exception()
 
@@ -28,7 +29,7 @@ class Dict(object):
         self.av_dict = pm[0]
 
     def __getitem__(self, key):
-        DictEntry = avutil.av_dict_get(self.av_dict, key, NULL, avutil.AV_DICT_MATCH_CASE)
+        DictEntry = avutil.av_dict_get(self.av_dict, key.encode('utf-8'), NULL, avutil.AV_DICT_MATCH_CASE)
         return stringify(DictEntry.value) if DictEntry != NULL else None
 
     def __delitem__(self, key):
@@ -47,11 +48,13 @@ class Dict(object):
             self.__setitem__(k, v)
 
     def next(self):
-        DictEntry = avutil.av_dict_get(self.av_dict, "", self.prev, avutil.AV_DICT_IGNORE_SUFFIX)
+        DictEntry = avutil.av_dict_get(self.av_dict, b"", self.prev, avutil.AV_DICT_IGNORE_SUFFIX)
         self.prev = DictEntry
         if DictEntry == NULL:
             raise StopIteration
         return stringify(DictEntry.key), stringify(DictEntry.value)
+    
+    __next__ = next
 
     def free(self):
         pm = ffi.new('AVDictionary *[1]')
@@ -72,4 +75,4 @@ class Dict(object):
         self.av_dict = pm[0]
 
     def to_primitive(self):
-        return {k: v for k, v in self if not k.startswith('_')}
+        return {k: v for k, v in self if not k.startswith(b'_')}

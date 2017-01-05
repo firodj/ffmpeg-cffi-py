@@ -142,7 +142,7 @@ class VideoCodecCtx(CodecCtx):
         return stringify( avutil.av_get_pix_fmt_name(self.av_codec_ctx.pix_fmt) )
     @pix_fmt.setter
     def pix_fmt(self, v):
-        self.av_codec_ctx.pix_fmt = avutil.av_get_pix_fmt(v)
+        self.av_codec_ctx.pix_fmt = avutil.av_get_pix_fmt(v.encode('utf-8'))
     
     @property
     def color_space(self):

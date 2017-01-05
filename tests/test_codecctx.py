@@ -41,7 +41,7 @@ def test_clone(setup):
 	ctx.height = 288
 	ctx.pix_fmt = "yuv420p"
 
-	assert "yuv420p" == ctx.pix_fmt
+	assert b"yuv420p" == ctx.pix_fmt
 
 	cloned = ctx.clone()
 	assert cloned.av_codec_ctx != ctx.av_codec_ctx
@@ -49,4 +49,4 @@ def test_clone(setup):
 
 	assert 352 == cloned.width
 	assert 288 == cloned.height
-	assert "yuv420p" == cloned.pix_fmt
+	assert b"yuv420p" == cloned.pix_fmt

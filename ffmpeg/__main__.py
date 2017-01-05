@@ -4,10 +4,11 @@ from ffmpeg.formatctx import *
 from ffmpeg.lib import *
 from fractions import Fraction
 from pprint import pprint as pp
+from six import print_
 import time
 
 if len(sys.argv) <= 1:
-	print "python -m ffmpeg <file>"
+	print_("python -m ffmpeg <file>")
 	exit()
 
 
@@ -22,12 +23,12 @@ pp(fmt_ctx)
 fmt_ctx.open_decoder()
 
 if fmt_ctx.video_codec_ctx:
-	print fmt_ctx.video_codec_ctx, fmt_ctx.video_codec_ctx.coder
+	print_(fmt_ctx.video_codec_ctx, fmt_ctx.video_codec_ctx.coder)
 if fmt_ctx.audio_codec_ctx:
-	print fmt_ctx.audio_codec_ctx, fmt_ctx.audio_codec_ctx.coder
+	print_(fmt_ctx.audio_codec_ctx, fmt_ctx.audio_codec_ctx.coder)
 
 pp( fmt_ctx.to_primitive(True) )
-print fmt_ctx.duration, fmt_ctx.duration_f
+print_(fmt_ctx.duration, fmt_ctx.duration_f)
 
 fmt_ctx.seek_frame( 1000.0 )
 video_frame_cnt = 0
@@ -44,9 +45,9 @@ for frame in fmt_ctx.next_frame():
 		video_frame_cnt += 1
 
 	if elapsed_time >= next_time:
-		print fmt_f2timestr(t), video_frame_cnt, video_frame_cnt / next_time
+		print_(fmt_f2timestr(t), video_frame_cnt, video_frame_cnt / next_time)
 		next_time += 1.0
 
-print fmt_f2timestr(t), video_frame_cnt
+print_(fmt_f2timestr(t), video_frame_cnt)
 
 fmt_ctx.close_decoder()

@@ -59,7 +59,7 @@ class VideoFrame(Frame):
 
     @property
     def type(self):
-        return "video"
+        return b'video'
 
     @property
     def pix_fmt(self):
@@ -80,32 +80,32 @@ class VideoFrame(Frame):
             width = self.width
         if height is None:
             height = self.height
-        
+
         pix_fmt = "rgb24"
 
         img = None
 
         sws_ctx = swscale.sws_getContext(self.width,
-            self.height, 
+            self.height,
             avutil.av_get_pix_fmt( self.pix_fmt ),
             width,
             height,
-            avutil.av_get_pix_fmt( pix_fmt ),
+            avutil.av_get_pix_fmt( pix_fmt.encode('utf-8') ),
             swscale.SWS_BICUBIC,
             NULL, NULL, NULL)
-                
+
         if sws_ctx != NULL:
             image_rgb = ffi.new('struct AVPicture *')
 
-            avcodec.avpicture_alloc(image_rgb, 
-                avutil.av_get_pix_fmt( pix_fmt),
-                width, 
+            avcodec.avpicture_alloc(image_rgb,
+                avutil.av_get_pix_fmt( pix_fmt.encode('utf-8') ),
+                width,
                 height)
 
             swscale.sws_scale(sws_ctx,
                 self.av_frame.data,
                 self.av_frame.linesize,
-                0, 
+                0,
                 self.av_frame.height,
                 image_rgb.data,
                 image_rgb.linesize)
@@ -118,7 +118,7 @@ class VideoFrame(Frame):
                 'RGB', 0, 1)
 
             avcodec.avpicture_free(image_rgb)
-        
+
             swscale.sws_freeContext(sws_ctx)
 
         return img
@@ -127,12 +127,12 @@ class AudioFrame(Frame):
 
     @property
     def type(self):
-        return "audio"
+        return b'audio'
 
     @property
     def nb_samples(self):
         return self.av_frame.nb_samples
-    
+
     @property
     def sample_fmt(self):
         return stringify(avutil.av_get_sample_fmt_name( self.av_frame.firnat ))
