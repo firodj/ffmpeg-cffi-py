@@ -1,6 +1,8 @@
 from .lib import *
 from .coder import Coder
 from .packet import Packet
+from .error import str_error
+from six import print_
 
 class CodecCtx(object):
     
@@ -37,16 +39,16 @@ class CodecCtx(object):
         return ctx
 
     @classmethod
-    def _encoded(cls, av_codec_ctx):
-        ctx = cls._new(av_codec_ctx)
-        if ctx:
-            ctx.coder = Coder.create( av_codec_ctx.codec )
+    def _encoded(cls, codec_id):
+        encoder = Coder.find_encoder( codec_id )
+        ctx = cls.create(encoder)
         return ctx
 
     def __init__(self, av_codec_ctx):
         self.av_codec_ctx = av_codec_ctx
         self.is_allocated = False
         self.coder = None
+        self.slave_av_codec_ctx = None
 
     def __del__(self):
         self.close()
@@ -95,7 +97,7 @@ class CodecCtx(object):
     @property
     def time_base(self):
         return rational( self.av_codec_ctx.time_base )
-    
+
     def clone(self):
         codec_ctx = CodecCtx.create(self.coder)
         if codec_ctx:
@@ -104,8 +106,18 @@ class CodecCtx(object):
 
         return codec_ctx
 
+    def clone_slave(self):
+        err = avcodec.avcodec_copy_context(self.slave_av_codec_ctx, self.av_codec_ctx)
+        if err:
+            print_("Error:", str_error(err))
+            return False
+
+        return True
+
     def open(self):
-        if avcodec.avcodec_open2(self.av_codec_ctx, self.coder.av_coder, NULL) != 0:
+        err = avcodec.avcodec_open2(self.av_codec_ctx, self.coder.av_coder, NULL)
+        if err:
+            print_("Error:", str_error(err))
             return False
         return True
 
@@ -120,6 +132,7 @@ class CodecCtx(object):
 
     def __repr__(self):
         return "<%s: %s %s>" % (self.__class__.__name__, self.type, repr(self.av_codec_ctx))
+
 
 class VideoCodecCtx(CodecCtx):
 

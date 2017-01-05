@@ -24,8 +24,6 @@ def test_open_input(setup):
 
 	assert InputFormat == type(fmt_ctx)
 
-	print_(fmt_ctx)
-
 	fmt_ctx.open_decoder()
 
 	#print_(fmt_ctx.video_codec_ctx, fmt_ctx.video_codec_ctx.coder)
@@ -64,9 +62,9 @@ def test_open_input_when_error(setup, mocker):
 	assert "Stream not found" in excinfo.value.message
 
 
-@pytest.mark.skipif(True, reason="still bug or wrong approach")
+@pytest.mark.skipif(False, reason="still bug or wrong approach")
 def test_create_output(setup):
-	path_out = 'tests/logs/output.mp4'
+	path_out = 'tests/logs/output.avi'
 
 	fmt_ctx = FormatCtx.create(path_out)
 
@@ -74,6 +72,8 @@ def test_create_output(setup):
 
 	fmt_ctx.create_video_stream()
 	fmt_ctx.create_audio_stream()
+
+	pp( fmt_ctx.to_primitive(True) )
 
 	fmt_ctx.open_encoder()
 

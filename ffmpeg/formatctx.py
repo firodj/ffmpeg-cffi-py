@@ -4,7 +4,8 @@ from .stream import Stream
 from .frame import VideoFrame, AudioFrame
 from .packet import Packet
 from .coder import Coder
-from .error import str_error
+from .error import str_error, check_ret
+from .codecctx import CodecCtx
 from six import print_
 
 avformat_open_input = getattr(avformat, 'avformat_open_input')
@@ -172,7 +173,6 @@ class InputFormat(FormatCtx):
 
     def open_decoder(self):
         if self.video_stream and not self.video_codec_ctx:
-            print_('try to open video')
             video_codec_ctx = self.video_stream.codec_ctx.clone()
             if video_codec_ctx:
                 if video_codec_ctx.open(): #self.video_stream.codec_ctx.coder
@@ -290,9 +290,8 @@ class OutputFormat(FormatCtx):
             self.av_format_ctx = NULL
 
     def new_stream(self, codec_id):
-        encoder = Coder.find_encoder(codec_id)
-        av_stream = avformat.avformat_new_stream(self.av_format_ctx, encoder.av_coder)
-        stream = Stream._encoded( av_stream )
+        av_stream = avformat.avformat_new_stream(self.av_format_ctx, NULL)
+        stream = Stream._encoded( av_stream, codec_id )
         return stream
 
     def create_video_stream(self, v_codec_id=avcodec.AV_CODEC_ID_NONE):
@@ -302,15 +301,15 @@ class OutputFormat(FormatCtx):
             return None
 
         video_stream = self.new_stream( v_codec_id )
-
         self.video_stream = video_stream
-        self.video_codec_ctx = video_stream.codec_ctx
         self.streams.append(self.video_stream)
 
+        v_encoder = video_stream.codec_ctx.coder
+        self.video_codec_ctx = video_stream.codec_ctx
         v_encoder_ctx = self.video_codec_ctx.av_codec_ctx
 
         assert video_stream.av_stream == self.av_format_ctx.streams[ video_stream.index ]
-        assert b'video' == video_stream.codec_ctx.type
+        assert b'video' == self.video_codec_ctx.type
 
         v_encoder_ctx.bit_rate = 400000
 
@@ -320,7 +319,12 @@ class OutputFormat(FormatCtx):
         v_encoder_ctx.qmax = 63
 
         v_encoder_ctx.gop_size      = 12
-        v_encoder_ctx.pix_fmt = avutil.AV_PIX_FMT_YUV420P
+
+        pix_fmts = v_encoder.supported_pix_fmts()
+        if pix_fmts:
+            v_encoder_ctx.pix_fmt = avutil.av_get_pix_fmt( pix_fmts[0] )
+        else:
+            v_encoder_ctx.pix_fmt = avutil.AV_PIX_FMT_YUV420P
 
         v_encoder_ctx.framerate.num = 25
         v_encoder_ctx.framerate.den = 1
@@ -338,6 +342,8 @@ class OutputFormat(FormatCtx):
         if (self.av_format_ctx.oformat.flags & avformat.AVFMT_GLOBALHEADER) != 0:
             v_encoder_ctx.flags |= avcodec.AV_CODEC_FLAG_GLOBAL_HEADER
 
+        self.video_stream.parameters_from_ctx(self.video_codec_ctx)
+
     def create_audio_stream(self, a_codec_id=avcodec.AV_CODEC_ID_NONE):
         if a_codec_id == avcodec.AV_CODEC_ID_NONE:
             a_codec_id = self.av_format_ctx.oformat.audio_codec
@@ -345,17 +351,22 @@ class OutputFormat(FormatCtx):
             return None
 
         audio_stream = self.new_stream( a_codec_id )
-
         self.audio_stream = audio_stream
-        self.audio_codec_ctx = self.audio_stream.codec_ctx
         self.streams.append(self.audio_stream)
 
+        a_encoder = audio_stream.codec_ctx.coder
+        self.audio_codec_ctx = audio_stream.codec_ctx
         a_encoder_ctx = self.audio_codec_ctx.av_codec_ctx
 
         assert audio_stream.av_stream == self.av_format_ctx.streams[audio_stream.index]
         assert b'audio' == audio_stream.codec_ctx.type
 
-        a_encoder_ctx.sample_fmt  = avutil.AV_SAMPLE_FMT_FLT
+        sample_fmts = a_encoder.supported_sample_fmts()
+
+        if sample_fmts:
+            a_encoder_ctx.sample_fmt  = avutil.av_get_sample_fmt( sample_fmts[0] )
+        else:
+            a_encoder_ctx.sample_fmt  = avutil.AV_SAMPLE_FMT_FLT
 
         a_encoder_ctx.bit_rate    = 64000
         a_encoder_ctx.sample_rate = 48000
@@ -369,6 +380,8 @@ class OutputFormat(FormatCtx):
 
         if (self.av_format_ctx.oformat.flags & avformat.AVFMT_GLOBALHEADER) != 0:
             a_encoder_ctx.flags |= avcodec.AV_CODEC_FLAG_GLOBAL_HEADER
+
+        self.audio_stream.parameters_from_ctx(self.audio_codec_ctx)
 
     @property
     def name(self):
@@ -394,8 +407,7 @@ class OutputFormat(FormatCtx):
             self.picture.height = self.video_codec_ctx.av_codec_ctx.height
 
             ret = avutil.av_frame_get_buffer(self.picture, 32)
-            if ret < 0:
-                raise FFMPEGException("Unable create Picture buffer")
+            check_ret(ret)
 
         if self.audio_codec_ctx:
             self.audio_codec_ctx.open()
@@ -414,14 +426,9 @@ class OutputFormat(FormatCtx):
             self.sound.sample_rate    = self.audio_codec_ctx.av_codec_ctx.sample_rate
             self.sound.nb_samples     = nb_samples
 
-            # Unknwon Behaviour
-            if self.audio_codec_ctx.coder.id == avcodec.AV_CODEC_ID_AAC:
-                self.sound.format = avutil.AV_SAMPLE_FMT_S16
-
-            if nb_samples:
-                ret = avutil.av_frame_get_buffer(self.sound, 0)
-                if ret < 0:
-                    raise FFMPEGException("Unable create Sound buffer")
+            #if nb_samples:
+            ret = avutil.av_frame_get_buffer(self.sound, 0)
+            check_ret(ret)
 
     def close_encoder(self):
         ref = ffi.new('AVFrame**')
@@ -461,14 +468,12 @@ class OutputFormat(FormatCtx):
             #ret = avformat.avio_open_dyn_buf(pb)
 
             ret = avformat.avio_open(pb, self.filepath, avformat.AVIO_FLAG_WRITE)
-            if ret < 0:
-                raise Exception()
+            check_ret(ret)
 
             self.av_format_ctx.pb = pb[0]
 
         ret = avformat.avformat_write_header(self.av_format_ctx, NULL)
-        if ret < 0:
-            raise Exception()
+        check_ret(ret)
 
     def write_trailer(self):
         avformat.av_write_trailer(self.av_format_ctx)
@@ -501,8 +506,7 @@ class OutputFormat(FormatCtx):
         pkt.init()
 
         ret = avcodec.avcodec_encode_video2(self.video_codec_ctx.av_codec_ctx, pkt.av_packet, av_frame, got_packet)
-        if ret < 0:
-            raise Exception()
+        check_ret(ret)
 
         if got_packet[0]:
             self._write_video_packet(pkt)
@@ -579,8 +583,7 @@ class OutputFormat(FormatCtx):
         pkt.init()
 
         ret = avcodec.avcodec_encode_audio2(self.audio_codec_ctx.av_codec_ctx, pkt.av_packet, av_frame, got_packet);
-        if ret < 0:
-            raise Exception()
+        check_ret(ret)
 
         if got_packet[0]:
             self._write_audio_packet(pkt)

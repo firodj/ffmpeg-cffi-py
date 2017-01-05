@@ -76,7 +76,7 @@ typedef struct AVIndexEntry AVIndexEntry;
 typedef struct AVStream {
     int index;
     int id;
-    AVCodecContext *codec;
+    AVCodecContext *codec; // @deprecated
     void *priv_data;
     struct AVFrac pts;  // @deprecated
     AVRational time_base;
@@ -149,6 +149,7 @@ typedef struct AVStream {
     AVRational display_aspect_ratio;
     struct FFFrac *priv_pts;
     AVStreamInternal *internal;
+    AVCodecParameters *codecpar;
 } AVStream;
 
 typedef struct AVProgram AVProgram;

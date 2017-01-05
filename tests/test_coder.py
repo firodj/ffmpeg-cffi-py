@@ -70,3 +70,9 @@ def test_audio_coder(setup):
 
 	assert 1 <= len(encoder.supported_channel_layouts())
 	assert b'mono' in encoder.supported_channel_layouts()
+
+def test_get_sample_fmt_by_name(setup):
+    assert avutil.AV_SAMPLE_FMT_FLT == avutil.av_get_sample_fmt(b'flt')
+
+def test_get_pix_fmt_by_name(setup):
+    assert avutil.AV_PIX_FMT_YUV420P == avutil.av_get_pix_fmt(b'yuv420p')

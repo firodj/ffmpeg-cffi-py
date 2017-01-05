@@ -748,6 +748,38 @@ typedef struct AVPacket {
     int64_t convergence_duration;   // @deprecated
 } AVPacket;
 
+typedef struct AVCodecParameters {
+    enum AVMediaType codec_type;
+    enum AVCodecID   codec_id;
+    uint32_t         codec_tag;
+    uint8_t *extradata;
+    int      extradata_size;
+    int format;
+    int64_t bit_rate;
+    int bits_per_coded_sample;
+    int bits_per_raw_sample;
+    int profile;
+    int level;
+    int width;
+    int height;
+    AVRational sample_aspect_ratio;
+    enum AVFieldOrder                  field_order;
+    enum AVColorRange                  color_range;
+    enum AVColorPrimaries              color_primaries;
+    enum AVColorTransferCharacteristic color_trc;
+    enum AVColorSpace                  color_space;
+    enum AVChromaLocation              chroma_location;
+    int video_delay;
+    uint64_t channel_layout;
+    int      channels;
+    int      sample_rate;
+    int      block_align;
+    int      frame_size;
+    int initial_padding;
+    int trailing_padding;
+    int seek_preroll;
+} AVCodecParameters;
+
 // @deprecated
 typedef struct AVPicture {
     uint8_t *data[AV_NUM_DATA_POINTERS];    ///< pointers to the image data planes
@@ -755,3 +787,5 @@ typedef struct AVPicture {
 } AVPicture;
 
 struct AVCodecParserContext;
+
+

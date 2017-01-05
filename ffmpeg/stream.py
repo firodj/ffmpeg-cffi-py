@@ -1,6 +1,7 @@
 from .lib import *
 from .dict import Dict
 from .codecctx import CodecCtx
+from .error import check_ret
 
 class Stream(object):
 
@@ -16,9 +17,9 @@ class Stream(object):
         return stream
 
     @classmethod
-    def _encoded(cls, av_stream):
+    def _encoded(cls, av_stream, codec_id):
         stream = cls(av_stream)
-        stream.codec_ctx = CodecCtx._encoded(av_stream.codec)
+        stream.codec_ctx = CodecCtx._encoded(codec_id)
         return stream
 
     @property
@@ -28,7 +29,7 @@ class Stream(object):
     @property
     def is_default(self):
         return (self.av_stream.disposition & avformat.AV_DISPOSITION_DEFAULT) != 0
-        
+
     @property
     def frame_rate(self):
         return rational( avformat.av_stream_get_r_frame_rate(self.av_stream) )
@@ -41,7 +42,7 @@ class Stream(object):
     @property
     def nb_frames(self):
         return self.av_stream.nb_frames
-    
+
     @property
     def start_time(self):
         return None if self.av_stream.start_time == int(ffi.cast('int64_t',avutil.AV_NOPTS_VALUE)) else self.av_stream.start_time
@@ -67,7 +68,11 @@ class Stream(object):
     @property
     def index(self):
         return self.av_stream.index
-    
+
+    def parameters_from_ctx(self, codec_ctx):
+        ret = avcodec.avcodec_parameters_from_context(self.av_stream.codecpar, codec_ctx.av_codec_ctx)
+        check_ret(ret)
+
     def to_primitive(self):
         d = dict(
             type     = self.codec_ctx.type,

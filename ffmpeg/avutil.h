@@ -23,6 +23,7 @@ void av_free(void *ptr);
 
 // samplefmt.h
 const char *av_get_sample_fmt_name(enum AVSampleFormat sample_fmt);
+enum AVSampleFormat av_get_sample_fmt(const char *name);
 int av_get_bytes_per_sample(enum AVSampleFormat sample_fmt);
 
 // pixdesc.h

@@ -42,6 +42,9 @@ int avcodec_decode_audio4(struct AVCodecContext *avctx, struct AVFrame *frame, i
 int avcodec_encode_video2(AVCodecContext *avctx, AVPacket *avpkt, const AVFrame *frame, int *got_packet_ptr);
 int avcodec_encode_audio2(AVCodecContext *avctx, AVPacket *avpkt, const AVFrame *frame, int *got_packet_ptr);
 
+// parameters
+int avcodec_parameters_from_context(AVCodecParameters *par, const AVCodecContext *codec);
+
 // deprecated
 int avpicture_alloc(struct AVPicture *picture, enum AVPixelFormat pix_fmt, int width, int height);
 void avpicture_free(struct AVPicture *picture);
