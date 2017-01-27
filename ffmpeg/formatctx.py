@@ -212,15 +212,18 @@ class InputFormat(FormatCtx):
                 yield frame
             if not do_next: break
 
-    def seek_frame(self, pos, stream_index=-1):
+    def seek_frame(self, pos, stream_index=-1,flags=avformat.AVSEEK_FLAG_BACKWARD):
+        """
+        the default (AVSEEK_FLAG_BACKWARD) seeks for the nearest valid frame allowing 
+        to go backward so that we reach a keyframe
+        """
         if type(pos) == int:
             timestamp = pos
         else:
             tb = self.streams[stream_index].time_base if stream_index > -1 else self.time_base
             timestamp = int(pos / tb)
-
         return avformat.av_seek_frame(self.av_format_ctx, stream_index, timestamp, 
-            avformat.AVSEEK_FLAG_BACKWARD) >= 0
+            flags) >= 0
 
     def _decode_pkt(self, pkt):
         if self.video_codec_ctx and pkt.stream_eq(self.video_stream):
