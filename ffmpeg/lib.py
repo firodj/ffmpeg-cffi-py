@@ -33,10 +33,10 @@ ffi.cdef(open(cwd('avcodec.h')).read())
 ffi.cdef(open(cwd('avformat.h')).read())
 ffi.cdef(open(cwd('swscale.h')).read())
 
-avutil = ffi.dlopen(dll('avutil-55'))
-avcodec = ffi.dlopen(dll('avcodec-57'))
-avformat = ffi.dlopen(dll('avformat-57'))
-swscale = ffi.dlopen(dll('swscale-4'))
+avutil = ffi.dlopen(dll('avutil'))
+avcodec = ffi.dlopen(dll('avcodec'))
+avformat = ffi.dlopen(dll('avformat'))
+swscale = ffi.dlopen(dll('swscale'))
 
 NULL = ffi.NULL
 
