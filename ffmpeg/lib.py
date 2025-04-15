@@ -14,6 +14,11 @@ def dll(name):
     if not path:
         path = cwd(name)
     if not os.path.exists(path):
+        xname = name.replace("-",".")
+        path = find_library(xname)
+        if not path:
+            path = cwd(xname)
+    if not os.path.exists(path):
         raise Exception(name)
     return path
 
