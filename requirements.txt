@@ -1,5 +1,5 @@
-pillow==2.9.0
-cffi>=1.4
+pillow>=11.2.1
+cffi>=1.17.1
 pytest
 pytest-mock
 six

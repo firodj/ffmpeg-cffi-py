@@ -3,3 +3,4 @@
 .cache
 build/
 tests/data
+.venv

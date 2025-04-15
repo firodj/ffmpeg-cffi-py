@@ -14,7 +14,9 @@ id_h264 = avcodec.AV_CODEC_ID_H264
 
 @pytest.fixture(scope='module')
 def setup():
-	register_all()
+	print_("avformat_version = {version}".format(version=avformat_version()))
+	# deprecated:
+	# register_all()
 
 def test_open_input(setup):
 	# LOCAL TEST ONLY

@@ -7,9 +7,15 @@ from collections import namedtuple
 from ctypes.util import find_library
 from cffi import FFI
 from fractions import Fraction
+import sys
 
 cwd = lambda x: os.path.join(os.path.dirname(__file__), x)
+ffi = FFI()
+
 def dll(name):
+    if sys.platform == 'linux':
+        return name
+
     path = find_library(name)
     if not path:
         path = cwd(name)
@@ -19,10 +25,9 @@ def dll(name):
         if not path:
             path = cwd(xname)
     if not os.path.exists(path):
-        raise Exception(name)
+        raise Exception("dll not found {name}".format(name=name))
     return path
 
-ffi = FFI()
 ffi.cdef(open(cwd('avutil_t.h')).read())
 ffi.cdef(open(cwd('avcodec_t.h')).read())
 ffi.cdef(open(cwd('avformat_t.h')).read())
